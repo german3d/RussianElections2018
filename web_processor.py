@@ -5,6 +5,7 @@ import pandas as pd
 from concurrent import futures
 from bs4 import BeautifulSoup
 from tqdm import tqdm_notebook
+from config import main_url
 
 
 def get_response(url, max_timeout=30, max_retry=100):
@@ -65,7 +66,7 @@ def collect_dataframe_from_page(url, location):
         colnames[0:2] = ["metric", "value"]
         df.columns = colnames
         df.drop("value", axis=1, inplace=True)
-        df = df.iloc[1:, :].applymap(lambda x: re.sub("\d+\.\d+%", "", x).strip() if "%" in x else x)        
+        df = df.iloc[1:, :].applymap(lambda x: re.sub("\d+\.\d+%", "", x).strip() if "%" in x else x)
         df = df.melt(id_vars="metric", value_name="value", var_name="PEC")
         return df
     
@@ -86,21 +87,22 @@ def tqdm_parallel_map(fn, *iterables, **kwargs):
     return results
 
 
-def get_data():
-	main_url = "http://www.vybory.izbirkom.ru/region/region/izbirkom?action=show&root=1&tvd=100100084849066&vrn=100100084849062&region=0&global=1&sub_region=0&prver=0&pronetvd=null&type=227"
+def get_raw_data():
 
-	# regional urls
-	urls_reg = collect_next_urls(main_url)
+    # regional urls
+    urls_reg = collect_next_urls(main_url)
 
-	# parallel URL collection
-	results = tqdm_parallel_map(collect_region_urls, urls_reg.keys(), urls_reg.values(), desc="URLs")
+    # parallel URL collection
+    results = tqdm_parallel_map(collect_region_urls, urls_reg.keys(), urls_reg.values(), desc="URLs")
 
-	# collected URLs
-	urls = {}
-	for res in results:
-	    urls = {**urls, **res}
-	
-	 # parallel data collection from tables
-	dfs = tqdm_parallel_map(collect_dataframe_from_page, urls.keys(), urls.values(), desc="Tables")
-	data = pd.concat(dfs, axis=0, ignore_index=True)
-	return data
+    # collected URLs
+    urls = {}
+    for res in results:
+        urls = {**urls, **res}
+
+    # parallel data collection from tables
+    dfs = tqdm_parallel_map(collect_dataframe_from_page, urls.keys(), urls.values(), desc="Tables")
+    data = pd.concat(dfs, axis=0, ignore_index=True)
+    data["value"] = data["value"].astype(int)
+    data["Total"] = "Итого"
+    return data
