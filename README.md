@@ -2,7 +2,7 @@
 
 This project is aimed to collect, visualize and find anomalies in official election results data.
 
-Binder link to interactive dashboard: [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/german3d/RussianElections2018/master)
+Binder link to interactive dashboard: [![Binder](https://mybinder.org/badge.svg)](https://mybinder.org/v2/gh/german3d/RussianElections2018/master?filepath=dashboard.ipynb)
 
 
 #### Main parts:
