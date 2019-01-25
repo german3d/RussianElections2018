@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from config import metrics_to_russian, hierarchy, candidates
 from IPython.display import display
 
-sns.set_style(style="whitegrid", rc={"grid.linestyle":"--"})
+sns.set_style(style="whitegrid", rc={"grid.linestyle": "--"})
 
 
 def assign_colors(data_dict):
@@ -43,7 +43,7 @@ def make_hover_info(data):
     node_info = [
         """
         <br>{distributed_abs_alias}: {distributed_abs:,}
-        <br>{turnout_share_alias}: {turnout_share:.1%}      
+        <br>{turnout_share_alias}: {turnout_share:.1%}
         <br>
         <br>Бабурин Сергей Николаевич: {baburin_share:.1%}
         <br>Грудинин Павел Николаевич: {grudinin_share:.1%}
@@ -117,23 +117,32 @@ def subsample_data(data, level, **kwargs):
     return df
 
 
-def display_bubbles(data, x, y, size, color, text, level, title, **kwargs):    
+def display_bubbles(data, x, y, size, color, text, level, title, **kwargs):
+    if x is None or y is None:
+        return
+    #x = "turnout_share" if x is None else x
+    #y = "Путин Владимир Владимирович (%)" if y is None else y
     df = subsample_data(data=data, level=level, **kwargs)
     x_tickformat = ',.2%' if ("share" in x or "%"in x) else ','
     y_tickformat = ',.2%' if ("share" in y or "%"in y) else ','
-    x_axis_style = dict(zeroline=False, ticks='outside', tickformat=x_tickformat)
-    y_axis_style = dict(zeroline=False, ticks='outside', tickformat=y_tickformat)
+    x_axis_style = dict(zeroline=False, ticks='outside',
+                        tickformat=x_tickformat)
+    y_axis_style = dict(zeroline=False, ticks='outside',
+                        tickformat=y_tickformat)
     sizeref = np.power(df[size].max(), 0.85) / .33e2**2
     plot_data = go.Data()
-    plot_data.append(make_trace(df, x, y, size, color, text, sizeref, visible=True))
+    plot_data.append(make_trace(df, x, y, size, color,
+                                text, sizeref, visible=True))
     layout = go.Layout(
         title=title,
         titlefont=dict(size=14),
         width=950,
         height=700,
         hovermode="closest",
-        xaxis=go.XAxis(x_axis_style, title=metrics_to_russian[x], titlefont=dict(size=12)),
-        yaxis=go.YAxis(y_axis_style, title=metrics_to_russian[y], titlefont=dict(size=12)),
+        xaxis=go.XAxis(
+            x_axis_style, title=metrics_to_russian[x], titlefont=dict(size=12)),
+        yaxis=go.YAxis(
+            y_axis_style, title=metrics_to_russian[y], titlefont=dict(size=12)),
         dragmode="pan",
     )
     df.iplot(kind="bubble",
@@ -146,18 +155,19 @@ def display_bubbles(data, x, y, size, color, text, level, title, **kwargs):
              theme="white")
 
 
-def display_kde(data, x, level, **kwargs):    
-    df = subsample_data(data=data, level=level, **kwargs) 
-    fig, ax = plt.subplots(figsize=(10,6));
+def display_kde(data, x, level, **kwargs):
+    df = subsample_data(data=data, level=level, **kwargs)
+    fig, ax = plt.subplots(figsize=(10, 6))
     metric = metrics_to_russian[x]
     array = df[x]
     array = array[np.isfinite(array)]
     x_min = np.percentile(array, 1)
     x_max = np.percentile(array, 99)
-    sns.kdeplot(data=array, shade=True, legend=False, ax=ax, clip=(x_min, x_max));    
-    ax.set_title(metric + " - распределение по $УИКам$", fontsize=14);
-    ax.set_xlabel(metric, fontsize=12);
-    ax.set_ylabel("Плотность функции распределения", fontsize=12);
+    sns.kdeplot(data=array, shade=True, legend=False,
+                ax=ax, clip=(x_min, x_max))
+    ax.set_title(metric + " - распределение по $УИКам$", fontsize=14)
+    ax.set_xlabel(metric, fontsize=12)
+    ax.set_ylabel("Плотность функции распределения", fontsize=12)
     if "share" in x or "%"in x:
         ax.set_xticklabels(["{:.2%}".format(x) for x in ax.get_xticks()])
     else:
@@ -169,17 +179,22 @@ def make_dashboard(data, method="bubble"):
 
     def update_from_district(*args):
         i_district = select_district.value
-        i_loc = widget_locations.loc[widget_locations["District"].isin(i_district)]
-        select_region.options = i_loc.drop_duplicates(["District", "Region"])["Region"].tolist()
-        select_region.value = i_loc.drop_duplicates(["District", "Region"])["Region"].tolist()
+        i_loc = widget_locations.loc[widget_locations["District"].isin(
+            i_district)]
+        select_region.options = i_loc.drop_duplicates(
+            ["District", "Region"])["Region"].tolist()
+        select_region.value = i_loc.drop_duplicates(
+            ["District", "Region"])["Region"].tolist()
 
     def update_from_region(*args):
         i_district = select_district.value
         i_region = select_region.value
         i_loc = widget_locations.loc[widget_locations["District"].isin(i_district) &
                                      widget_locations["Region"].isin(i_region)]
-        select_TEC.options = i_loc.drop_duplicates(subset=["District", "Region", "TEC"])["TEC"].tolist()
-        select_TEC.value = i_loc.drop_duplicates(subset=["District", "Region", "TEC"])["TEC"].tolist()
+        select_TEC.options = i_loc.drop_duplicates(
+            subset=["District", "Region", "TEC"])["TEC"].tolist()
+        select_TEC.value = i_loc.drop_duplicates(
+            subset=["District", "Region", "TEC"])["TEC"].tolist()
 
     def update_active_locations(*args):
         i_level = dropdown_level.value
@@ -221,14 +236,16 @@ def make_dashboard(data, method="bubble"):
 
     dropdown_xaxis = ipywidgets.Dropdown(
         options={v: k for k, v in metrics_to_russian.items()},
-        value="turnout_share",
+        index=None,
+        #value="turnout_share",
         description="Ось X",
         layout={"width": "50%"}
     )
 
     dropdown_yaxis = ipywidgets.Dropdown(
         options={v: k for k, v in metrics_to_russian.items()},
-        value="Путин Владимир Владимирович (%)",
+        index=None,
+        #value="Путин Владимир Владимирович (%)",
         description="Ось Y",
         layout={"width": "50%"}
     )
@@ -237,7 +254,6 @@ def make_dashboard(data, method="bubble"):
         options={v: k for k, v in metrics_to_russian.items()},
         value="listed_abs",
         description="Размер",
-        style={"description_width": "30%"},
         layout={"width": "50%"}
     )
 
@@ -261,16 +277,18 @@ def make_dashboard(data, method="bubble"):
         layout={"width": "50%"},
         disabled=True)
 
-    select_district.observe(update_from_district, "value")    
+    select_district.observe(update_from_district, "value")
     select_region.observe(update_from_region, "value")
 
-    accordion = ipywidgets.Accordion(children=[select_district, select_region, select_TEC], selected_index=-1)
+    accordion = ipywidgets.Accordion(
+        children=[select_district, select_region, select_TEC], selected_index=None)
     accordion.set_title(0, "Федеральный округ")
     accordion.set_title(1, "Cубъект")
-    accordion.set_title(2, "ТИК")    
+    accordion.set_title(2, "ТИК")
 
     if method == "bubble":
-        extra_widgets = [dropdown_level, dropdown_xaxis, dropdown_yaxis, dropdown_size]        
+        extra_widgets = [dropdown_level, dropdown_xaxis,
+                         dropdown_yaxis, dropdown_size]
         dropdown_level.observe(update_active_locations, "value")
         out = ipywidgets.interactive_output(display_bubbles,
                                             controls=dict(
@@ -278,9 +296,12 @@ def make_dashboard(data, method="bubble"):
                                                 x=dropdown_xaxis,
                                                 y=dropdown_yaxis,
                                                 size=dropdown_size,
-                                                color=ipywidgets.fixed("color_district"),
-                                                text=ipywidgets.fixed("hover_text"),
-                                                title=ipywidgets.fixed("Результаты по всем участкам"),
+                                                color=ipywidgets.fixed(
+                                                    "color_district"),
+                                                text=ipywidgets.fixed(
+                                                    "hover_text"),
+                                                title=ipywidgets.fixed(
+                                                    "Результаты по всем участкам"),
                                                 level=dropdown_level,
                                                 district=select_district,
                                                 region=select_region,
@@ -295,14 +316,18 @@ def make_dashboard(data, method="bubble"):
                                                 x=dropdown_xaxis,
                                                 y=dropdown_yaxis,
                                                 size=dropdown_size,
-                                                color=ipywidgets.fixed("color_district"),
-                                                text=ipywidgets.fixed("hover_text"),
-                                                title=ipywidgets.fixed("Результаты по аномальным участкам"),
+                                                color=ipywidgets.fixed(
+                                                    "color_district"),
+                                                text=ipywidgets.fixed(
+                                                    "hover_text"),
+                                                title=ipywidgets.fixed(
+                                                    "Результаты по аномальным участкам"),
                                                 level=ipywidgets.fixed("PEC"))
                                             )
         display(*extra_widgets, out)
     elif method == "kde":
-        accordion = ipywidgets.Accordion(children=[select_district, select_region], selected_index=-1)
+        accordion = ipywidgets.Accordion(
+            children=[select_district, select_region], selected_index=-1)
         accordion.set_title(0, "Федеральный округ")
         accordion.set_title(1, "Cубъект")
         extra_widgets = [dropdown_xaxis]
@@ -312,7 +337,7 @@ def make_dashboard(data, method="bubble"):
         out = ipywidgets.interactive_output(display_kde,
                                             controls=dict(
                                                 data=ipywidgets.fixed(data),
-                                                x=dropdown_xaxis,                                                
+                                                x=dropdown_xaxis,
                                                 level=ipywidgets.fixed("PEC"),
                                                 district=select_district,
                                                 region=select_region,
@@ -320,4 +345,5 @@ def make_dashboard(data, method="bubble"):
                                             )
         display(*extra_widgets, accordion, out)
     else:
-        raise ValueError("Invalid method parameter, must be 'bubble' or 'kde'!")    
+        raise ValueError(
+            "Invalid method parameter, must be 'bubble' or 'kde'!")
